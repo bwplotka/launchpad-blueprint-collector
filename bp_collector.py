@@ -23,6 +23,7 @@
 # Unless otherwise agreed by Intel in writing, you may not remove or alter
 # this notice or any other notice embedded in Materials by Intel or
 # Intel's suppliers or licensors in any way.
+
 ######################################
 #  Launchpad Blueprint Collector is an app with GUI which collects
 #  all valid blueprints from existing project on launchpad via https://api.launchpad.net/devel/
@@ -52,12 +53,12 @@ class BPCollector():
 
     def __init__(self, parent, output_file, project="openstack", extended=False, size=100, with_def_milestone=True):
         self.p = parent
-        self.output_file = output_file #str(os.path.realpath(__file__) + output_file)
+        self.output_file = output_file
         self.project = project
         self.size = size
         self.bp_url = OPENSTACK_BP_URL_PREFIX + str(project) + OPENSTACK_BP_URL_SUFFIX + str(self.size)
         self.file_initialized = False
-        self.with_def_milestone= with_def_milestone
+        self.with_def_milestone = with_def_milestone
         self.ext = extended
         self.allowed_cols = ['web_link', 'name', 'definition_status', 'implementation_status', 'milestone_link',
                              'summary', 'date_started', 'date_created']
@@ -75,11 +76,13 @@ class BPCollector():
                 content = json.loads(response)
             except:
                 self.p.print("Project '" + str(self.project) + "' does not exist!"
-                                                              " Example existing projects: nova, neutron, openstack...")
+                             " Example existing projects: nova, neutron, openstack...")
                 return
 
             with open(self.output_file, "a", encoding='utf-8',  newline='') as bp_file:
-                csv_file = csv.writer(bp_file, dialect="excel") #delimiter=self.delimiter, quotechar='|', quoting=csv.QUOTE_MINIMAL)
+                # NOTE: We could try different delimiters here:
+                # "delimiter=self.delimiter, quotechar='|', quoting=csv.QUOTE_MINIMAL"
+                csv_file = csv.writer(bp_file, dialect="excel")
                 if not self.file_initialized:
                     total = float(content.get('total_size', 0))
                     self.p.p_step = float(100.0/total)
@@ -100,11 +103,13 @@ class BPCollector():
                     else:
                         self.save_entry(bp, csv_file)
 
-
-            processed = int(content.get('start', 0)) + min((int(content.get('total_size', 0)) - int(content.get('start', 0))), self.size)
+            processed = int(content.get('start', 0)) + min((int(content.get('total_size', 0)) -
+                                                            int(content.get('start', 0))), self.size)
             self.p.update_prog(min((int(content.get('total_size', 0)) - int(content.get('start', 0))), self.size))
             self.p.print("Processed " + str(processed) + " of " + str(content.get('total_size', "?")))
+
             time.sleep(0.05)
+
             next_url = content.get('next_collection_link', None)
             if not next_url:
                 self.p.setValue(100)
@@ -147,7 +152,9 @@ class BPCollector():
                 except:
                     value = value.encode('utf-8', errors='replace')
 
-                line.append(value)#.replace(self.delimeter, "").replace("\n", "|"))
+                # NOTE: We could try different delimiters here:
+                # "delimiter=self.delimiter, quotechar='|', quoting=csv.QUOTE_MINIMAL"
+                line.append(value)
             file_handler.writerow(line)
         except Exception as ex:
             if str(ex) == "Milestone is None":
@@ -163,7 +170,8 @@ class MyThread(QtCore.QThread):
     def __init__(self, parent=None):
         super(MyThread, self).__init__(parent)
         self.parent = parent
-         # Progr
+
+        # Progress customization.
         self.p_step = 1
         self.p_value = 0
 
@@ -177,6 +185,7 @@ class MyThread(QtCore.QThread):
         self.p_value += amount*self.p_step
         self.pbar_trg.emit(self.p_value)
 
+    # Camel case here to be consistent with PyQt
     def setValue(self, value):
         self.pbar_trg.emit(value)
 
